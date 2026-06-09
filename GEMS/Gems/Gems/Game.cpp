@@ -3,9 +3,8 @@
 #include <ctime>
 #include <cmath>
 #include <algorithm>
-#include <random>
 
-Game::Game() : isSelected(false), selectedCell(-1, -1) {
+Game::Game() {
     std::srand(std::time(nullptr));
     initBoard();
 }
@@ -22,27 +21,15 @@ void Game::initBoard() {
 }
 
 void Game::handleMouseClick(int mouseX, int mouseY) {
-    int c = mouseX / CELL_SIZE;
-    int r = mouseY / CELL_SIZE;
+    sf::Vector2i cell1, cell2;
 
-    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+    if (input.processClick(mouseX, mouseY, cell1, cell2)) {
+        std::swap(board[cell1.y][cell1.x], board[cell2.y][cell2.x]);
 
-    if (!isSelected) {
-        selectedCell = sf::Vector2i(c, r);
-        isSelected = true;
-    }
-    else {
-        if ((std::abs(selectedCell.x - c) == 1 && selectedCell.y == r) ||
-            (std::abs(selectedCell.y - r) == 1 && selectedCell.x == c)) {
-
-            std::swap(board[r][c], board[selectedCell.y][selectedCell.x]);
-
-            bool marked[ROWS][COLS] = { false };
-            if (!findMatches(marked)) {
-                std::swap(board[r][c], board[selectedCell.y][selectedCell.x]);
-            }
+        bool marked[ROWS][COLS] = { false };
+        if (!findMatches(marked)) {
+            std::swap(board[cell1.y][cell1.x], board[cell2.y][cell2.x]);
         }
-        isSelected = false;
     }
 }
 
@@ -82,56 +69,6 @@ bool Game::findMatches(bool markedToDestroy[ROWS][COLS]) {
     return hasMatches;
 }
 
-std::vector<Point> Game::getValidNeighborsInRadius3(int startR, int startC) {
-    std::vector<Point> targets;
-    for (int r = 0; r < ROWS; ++r) {
-        for (int c = 0; c < COLS; ++c) {
-            if (std::abs(r - startR) <= 3 && std::abs(c - startC) <= 3) {
-                targets.push_back({ r, c });
-            }
-        }
-    }
-    return targets;
-}
-
-void Game::triggerInstantBonus(int targetR, int targetC, int bonusType, int originalColor) {
-    std::random_device rd;
-    std::mt19937 g(rd());
-
-    if (bonusType == 1) {
-        board[targetR][targetC] = originalColor;
-
-        auto area = getValidNeighborsInRadius3(targetR, targetC);
-        std::shuffle(area.begin(), area.end(), g);
-
-        int changedCount = 0;
-        for (size_t i = 0; changedCount < 2 && i < area.size(); ++i) {
-            Point p = area[i];
-            if (p.r == targetR && p.c == targetC) continue;
-            if (std::abs(p.r - targetR) + std::abs(p.c - targetC) > 1) {
-                board[p.r][p.c] = originalColor;
-                changedCount++;
-            }
-        }
-    }
-    else if (bonusType == 2) {
-        std::vector<Point> allBoardCells;
-        for (int r = 0; r < ROWS; ++r) {
-            for (int c = 0; c < COLS; ++c) {
-                if (r != targetR || c != targetC) allBoardCells.push_back({ r, c });
-            }
-        }
-        std::shuffle(allBoardCells.begin(), allBoardCells.end(), g);
-
-        board[targetR][targetC] = 0;
-
-        int toDestroy = std::min(4, (int)allBoardCells.size());
-        for (int i = 0; i < toDestroy; ++i) {
-            board[allBoardCells[i].r][allBoardCells[i].c] = 0;
-        }
-    }
-}
-
 void Game::processDestruction() {
     bool marked[ROWS][COLS] = { false };
     if (!findMatches(marked)) return;
@@ -143,13 +80,8 @@ void Game::processDestruction() {
                 board[r][c] = 0;
 
                 if (std::rand() % 100 < 15) {
-                    auto area = getValidNeighborsInRadius3(r, c);
-                    if (!area.empty()) {
-                        Point target = area[std::rand() % area.size()];
-                        int bonusType = (std::rand() % 2) + 1;
-
-                        triggerInstantBonus(target.r, target.c, bonusType, origColor);
-                    }
+                    int bonusType = (std::rand() % 2) + 1;
+                    bonus.triggerInstantBonus(board, r, c, bonusType, origColor);
                 }
             }
         }

@@ -2,21 +2,21 @@
 #include <vector>
 #include <SFML/Graphics.hpp>
 #include "Config.h"
+#include "Bonus.h"
+#include "Input.h"
 
 class Game {
 private:
     int board[ROWS][COLS];
-    sf::Vector2i selectedCell;
-    bool isSelected;
+
+    Input input;
+    Bonus bonus;
 
     void fillEmptyCells();
     bool findMatches(bool markedToDestroy[ROWS][COLS]);
     void floodFill(int r, int c, int color, bool visited[ROWS][COLS], std::vector<Point>& component);
     void processDestruction();
     void dropGems();
-
-    void triggerInstantBonus(int targetR, int targetC, int bonusType, int originalColor);
-    std::vector<Point> getValidNeighborsInRadius3(int startR, int startC);
 
 public:
     Game();
@@ -25,5 +25,6 @@ public:
     void update();
 
     auto getBoard() -> const int(*)[COLS] { return board; }
-    sf::Vector2i getSelectedCell() { return isSelected ? selectedCell : sf::Vector2i(-1, -1); }
+    sf::Vector2i getSelectedCell() { return input.getSelectedCell();
+    }
 };
