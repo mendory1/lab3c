@@ -131,18 +131,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BombBonusGem.cpp" />
     <ClCompile Include="Bonus.cpp" />
+    <ClCompile Include="ColorBonusGem.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="Gem.cpp" />
     <ClCompile Include="Gems.cpp" />
     <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="Input.cpp" />
+    <ClCompile Include="RegularGem.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BombBonusGem.h" />
     <ClInclude Include="Bonus.h" />
+    <ClInclude Include="ColorBonusGem.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="Gem.h" />
+    <ClInclude Include="GemFactory.h" />
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="RegularGem.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

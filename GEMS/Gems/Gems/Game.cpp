@@ -1,7 +1,7 @@
 #include "Game.h"
+#include "GemFactory.h"
 #include <cstdlib>
 #include <ctime>
-#include <cmath>
 #include <algorithm>
 
 Game::Game() {
@@ -9,13 +9,23 @@ Game::Game() {
     initBoard();
 }
 
+void Game::syncIntBoard() {
+    for (int r = 0; r < ROWS; ++r) {
+        for (int c = 0; c < COLS; ++c) {
+            intBoard[r][c] = board[r][c] ? board[r][c]->getColor() : 0;
+        }
+    }
+}
+
 void Game::initBoard() {
     for (int r = 0; r < ROWS; ++r) {
         for (int c = 0; c < COLS; ++c) {
             do {
-                board[r][c] = (std::rand() % NUM_COLORS) + 1;
-            } while ((c >= 2 && board[r][c] == board[r][c - 1] && board[r][c] == board[r][c - 2]) ||
-                (r >= 2 && board[r][c] == board[r - 1][c] && board[r][c] == board[r - 2][c]));
+                int color = (std::rand() % NUM_COLORS) + 1;
+                board[r][c] = std::make_unique<RegularGem>(color);
+                intBoard[r][c] = color;
+            } while ((c >= 2 && intBoard[r][c] == intBoard[r][c - 1] && intBoard[r][c] == intBoard[r][c - 2]) ||
+                (r >= 2 && intBoard[r][c] == intBoard[r - 1][c] && intBoard[r][c] == intBoard[r - 2][c]));
         }
     }
 }
@@ -25,17 +35,19 @@ void Game::handleMouseClick(int mouseX, int mouseY) {
 
     if (input.processClick(mouseX, mouseY, cell1, cell2)) {
         std::swap(board[cell1.y][cell1.x], board[cell2.y][cell2.x]);
+        syncIntBoard();
 
         bool marked[ROWS][COLS] = { false };
         if (!findMatches(marked)) {
             std::swap(board[cell1.y][cell1.x], board[cell2.y][cell2.x]);
+            syncIntBoard();
         }
     }
 }
 
 void Game::floodFill(int r, int c, int color, bool visited[ROWS][COLS], std::vector<Point>& component) {
     if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
-    if (visited[r][c] || board[r][c] != color || board[r][c] == 0) return;
+    if (visited[r][c] || intBoard[r][c] != color || intBoard[r][c] == 0) return;
 
     visited[r][c] = true;
     component.push_back({ r, c });
@@ -53,9 +65,9 @@ bool Game::findMatches(bool markedToDestroy[ROWS][COLS]) {
 
     for (int r = 0; r < ROWS; ++r) {
         for (int c = 0; c < COLS; ++c) {
-            if (!visited[r][c] && board[r][c] > 0) {
+            if (!visited[r][c] && intBoard[r][c] > 0) {
                 std::vector<Point> component;
-                floodFill(r, c, board[r][c], visited, component);
+                floodFill(r, c, intBoard[r][c], visited, component);
 
                 if (component.size() >= 3) {
                     hasMatches = true;
@@ -73,19 +85,31 @@ void Game::processDestruction() {
     bool marked[ROWS][COLS] = { false };
     if (!findMatches(marked)) return;
 
+    int tempBoard[ROWS][COLS];
+    for (int r = 0; r < ROWS; ++r) {
+        for (int c = 0; c < COLS; ++c) tempBoard[r][c] = intBoard[r][c];
+    }
+
     for (int r = 0; r < ROWS; ++r) {
         for (int c = 0; c < COLS; ++c) {
-            if (marked[r][c]) {
-                int origColor = board[r][c];
-                board[r][c] = 0;
-
-                if (std::rand() % 100 < 15) {
-                    int bonusType = (std::rand() % 2) + 1;
-                    bonus.triggerInstantBonus(board, r, c, bonusType, origColor);
-                }
+            if (marked[r][c] && board[r][c]) {
+                board[r][c]->onDestroy(tempBoard, r, c);
+                board[r][c].reset();
             }
         }
     }
+
+    for (int r = 0; r < ROWS; ++r) {
+        for (int c = 0; c < COLS; ++c) {
+            if (tempBoard[r][c] == 0 && board[r][c]) {
+                board[r][c].reset();
+            }
+            else if (board[r][c] && board[r][c]->getColor() != tempBoard[r][c]) {
+                board[r][c] = std::make_unique<RegularGem>(tempBoard[r][c]);
+            }
+        }
+    }
+    syncIntBoard();
 }
 
 void Game::dropGems() {
@@ -94,8 +118,7 @@ void Game::dropGems() {
         for (int r = ROWS - 1; r >= 0; --r) {
             if (board[r][c] != 0) {
                 if (emptyRow != r) {
-                    board[emptyRow][c] = board[r][c];
-                    board[r][c] = 0;
+                    board[emptyRow][c] = std::move(board[r][c]);
                 }
                 emptyRow--;
             }
@@ -107,11 +130,12 @@ void Game::dropGems() {
 void Game::fillEmptyCells() {
     for (int r = 0; r < ROWS; ++r) {
         for (int c = 0; c < COLS; ++c) {
-            if (board[r][c] == 0) {
-                board[r][c] = (std::rand() % NUM_COLORS) + 1;
+            if (!board[r][c]) {
+                board[r][c] = GemFactory::createRandomGem();
             }
         }
     }
+    syncIntBoard();
 }
 
 void Game::update() {
