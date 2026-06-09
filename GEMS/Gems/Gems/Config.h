@@ -8,7 +8,7 @@ const int PADDING = 10;
 
 const int NUM_COLORS = 4;
 
-const sf::Color Colors[] = {
+inline const sf::Color Colors[] = {
     sf::Color::Black,
     sf::Color::Red,
     sf::Color::Green,
