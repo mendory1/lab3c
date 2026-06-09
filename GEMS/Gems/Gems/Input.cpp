@@ -10,8 +10,8 @@ void Input::resetSelection() {
 }
 
 bool Input::processClick(int mouseX, int mouseY, sf::Vector2i& outCell1, sf::Vector2i& outCell2) {
-    int c = mouseX / CELL_SIZE;
-    int r = mouseY / CELL_SIZE;
+    int c = (mouseX - PADDING) / CELL_SIZE;
+    int r = (mouseY - PADDING) / CELL_SIZE;
     if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
 
     if (!isSelected) {
